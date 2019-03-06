@@ -1,6 +1,6 @@
 #include "defines.h"
 
-bool displayClear(byte ID = 1, bool force = false) {
+bool displayClear(byte ID = 1, bool force = false ) {
   volatile static byte oldID = 0;
 
   if ((oldID != ID) || force) {
@@ -8,13 +8,6 @@ bool displayClear(byte ID = 1, bool force = false) {
     oldID = ID;
     return true;
   } else return false;
-}
-
-void WDTint_() {
-  if (WDTcounts > 2) {
-    WDTcounts = 0;
-    resetFunc();
-  } else WDTcounts++;
 }
 
 void setup() {
@@ -43,7 +36,7 @@ void setup() {
   }
 
 #ifdef DISPLAY_I2C
-  Wire.begin();
+  Wire.begin( 5, 4);
   Wire.setClock(400000L);
   display.begin(&Adafruit128x64, 0x3C);
 #endif
@@ -74,9 +67,6 @@ void setup() {
     display.println((const __FlashStringHelper *) noBUS4);
     display.set1X();
   } else displayClear(1);
-
-  WDTcounts = 0;
-  WatchDog::init(WDTint_, 500);
 }
 
 void loop() { //cycle time w\o data exchange ~8 us :)
@@ -91,8 +81,6 @@ void loop() { //cycle time w\o data exchange ~8 us :)
 
   Message.Process();
   Message.ProcessBroadcast();
-
-  WDTcounts=0;
 }
 
 void showBatt(int percent, bool blinkIt) {
@@ -1171,10 +1159,10 @@ void prepareCommand(unsigned char cmd) {
 }
 
 void writeQuery() {
-  RX_DISABLE;
+//  RX_DISABLE;
   XIAOMI_PORT.write((unsigned char*)&_Query.buf, _Query.DataLen + 2);     //DataLen + length of preamble
   XIAOMI_PORT.write((unsigned char*)&_Query.cs, 2);
-  RX_ENABLE;
+//  RX_ENABLE;
   _Query.prepared = 0;
 }
 
