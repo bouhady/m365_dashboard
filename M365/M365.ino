@@ -10,8 +10,10 @@ bool displayClear(byte ID = 1, bool force = false ) {
   } else return false;
 }
 
+static M365_BLE_PORT blePort;
+
 void setup() {
-  XIAOMI_PORT.begin(115200);
+  Serial.begin(115200);
 
   byte cfgID = EEPROM.read(0);
   if (cfgID == 128) {
@@ -43,13 +45,16 @@ void setup() {
 #ifdef DISPLAY_SPI
   display.begin(&Adafruit128x64, PIN_CS, PIN_DC, PIN_RST);
 #endif
-  
+
   display.setFont(m365);
   displayClear(0, true);
   display.setCursor(0, 0);
   display.print((char)0x20);
   display.setFont(defaultFont);
 
+  blePort.initi();
+  prepareNextQuery();
+  writeQuery();
   unsigned long wait = millis() + 2000;
   while ((wait > millis()) || ((wait - 1000 > millis()) && (S25C31.current != 0) && (S25C31.voltage != 0) && (S25C31.remainPercent != 0))) {
     dataFSM();
@@ -67,6 +72,7 @@ void setup() {
     display.println((const __FlashStringHelper *) noBUS4);
     display.set1X();
   } else displayClear(1);
+  Serial.println("Finish setup" );
 }
 
 void loop() { //cycle time w\o data exchange ~8 us :)
@@ -819,12 +825,11 @@ void dataFSM() {
   static unsigned char   Buf[RECV_BUFLEN];
   static unsigned char * _bufPtr;
   _bufPtr = (unsigned char*)&Buf;
-
   switch (step) {
     case 0:                                                             //search header sequence
-      while (XIAOMI_PORT.available() >= 2)
-        if (XIAOMI_PORT.read() == 0x55 && XIAOMI_PORT.peek() == 0xAA) {
-          XIAOMI_PORT.read();                                           //discard second part of header
+      while (blePort.available() >= 2)
+        if (blePort.read() == 0x55 && blePort.peek() == 0xAA) {
+          blePort.read();                                           //discard second part of header
           step = 1;
           break;
         }
@@ -852,8 +857,8 @@ void dataFSM() {
         break;
       }
 
-      while (XIAOMI_PORT.available()) {               //read available bytes from port-buffer
-        bt = XIAOMI_PORT.read();
+      while (blePort.available()) {               //read available bytes from port-buffer
+        bt = blePort.read();
         readCounter++;
         if (readCounter <= sizeof(AnswerHeader)) {    //separate header into header-structure
           *asPtr++ = bt;
@@ -1159,10 +1164,18 @@ void prepareCommand(unsigned char cmd) {
 }
 
 void writeQuery() {
-//  RX_DISABLE;
-  XIAOMI_PORT.write((unsigned char*)&_Query.buf, _Query.DataLen + 2);     //DataLen + length of preamble
-  XIAOMI_PORT.write((unsigned char*)&_Query.cs, 2);
-//  RX_ENABLE;
+  //  RX_DISABLE;
+
+  Serial.println("Command  : " );
+  for (int i = 0; i < _Query.DataLen; i++)
+  {
+    Serial.printf("%02X", &_Query.buf);
+  }
+  Serial.println(" ");
+  //
+  blePort.write((unsigned char*)&_Query.buf, _Query.DataLen + 2);     //DataLen + length of preamble
+  blePort.write((unsigned char*)&_Query.cs, 2);
+  //  RX_ENABLE;
   _Query.prepared = 0;
 }
 

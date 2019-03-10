@@ -18,6 +18,7 @@
 #include "fonts/System5x7mod.h"
 #include "fonts/stdNumb.h"
 #include "fonts/bigNumb.h"
+#include "M365_BLE_PORT.h"
 
 #include <EEPROM.h>
 
